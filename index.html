@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Document Category API Test</title>
+  </head>
+  <body>
+    <h1>Create Document Category</h1>
+    <form id="createForm">
+      <label for="categoryname">Category Name:</label>
+      <input type="text" id="categoryname" required /><br />
+
+      <label for="categorydatatype">Category Data Type:</label>
+      <select id="categorydatatype">
+        <option value="STRING">STRING</option>
+        <option value="INTEGER">INTEGER</option>
+        <option value="FLOAT">FLOAT</option>
+        <option value="DATEONLY">DATEONLY</option>
+        <option value="FILE">FILE</option></select
+      ><br />
+
+      <label for="file">File Data:</label>
+      <input type="file" id="file" /><br />
+
+      <button type="button" onclick="handleCreateFormSubmit()">Create</button>
+    </form>
+
+    <script>
+      const apiUrl = "http://localhost:3000";
+
+      // Function to handle form submission for creating a document category
+      const handleCreateFormSubmit = async () => {
+        const categoryname = document.getElementById("categoryname").value;
+        const categorydatatype =
+          document.getElementById("categorydatatype").value;
+        const fileInput = document.getElementById("file");
+
+        // Check if the required fields are filled
+        if (!categoryname || !categorydatatype) {
+          alert(
+            "Please fill in the category name and data type before submitting."
+          );
+          return;
+        }
+
+        // Create a new FormData instance
+        const formData = new FormData();
+
+        // Append form fields to the FormData instance
+        formData.append("categoryname", categoryname);
+        formData.append("categorydatatype", categorydatatype);
+
+        // Check if a file is selected and append it to the FormData instance
+        if (fileInput.files.length > 0) {
+          const file = fileInput.files[0];
+          formData.append("file", file);
+        }
+
+        try {
+          const response = await fetch(`${apiUrl}/create`, {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await response.json();
+          alert(data.message);
+        } catch (error) {
+          console.error("Error creating document category:", error);
+          alert("An error occurred while creating the document category");
+        }
+      };
+    </script>
+  </body>
+</html>
