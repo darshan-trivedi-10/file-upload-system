@@ -20,19 +20,46 @@
 
       <label for="file">File Data:</label>
       <input type="file" id="file" /><br />
+      <button type="button" onclick="handleAddFile()">Add File</button><br />
+
+      <div id="fileList"></div>
 
       <button type="button" onclick="handleCreateFormSubmit()">Create</button>
     </form>
 
     <script>
       const apiUrl = "http://localhost:3000";
+      const fileListContainer = document.getElementById("fileList");
+      const fileInputs = []; // Array to store selected files
+
+      // Function to handle adding a file to the list
+      const handleAddFile = () => {
+        const fileInput = document.getElementById("file");
+        const file = fileInput.files[0];
+
+        // Check if a file is selected
+        if (!file) {
+          alert("Please select a file before adding.");
+          return;
+        }
+
+        // Add the selected file to the array
+        fileInputs.push(file);
+
+        const fileName = file.name;
+        const fileItem = document.createElement("div");
+        fileItem.textContent = fileName;
+        fileListContainer.appendChild(fileItem);
+
+        // Clear the file input
+        fileInput.value = "";
+      };
 
       // Function to handle form submission for creating a document category
       const handleCreateFormSubmit = async () => {
         const categoryname = document.getElementById("categoryname").value;
         const categorydatatype =
           document.getElementById("categorydatatype").value;
-        const fileInput = document.getElementById("file");
 
         // Check if the required fields are filled
         if (!categoryname || !categorydatatype) {
@@ -49,11 +76,10 @@
         formData.append("categoryname", categoryname);
         formData.append("categorydatatype", categorydatatype);
 
-        // Check if a file is selected and append it to the FormData instance
-        if (fileInput.files.length > 0) {
-          const file = fileInput.files[0];
-          formData.append("file", file);
-        }
+        // Append selected files to the FormData instance
+        fileInputs.forEach((file) => {
+          formData.append("files", file);
+        });
 
         try {
           const response = await fetch(`${apiUrl}/create`, {
@@ -63,6 +89,11 @@
 
           const data = await response.json();
           alert(data.message);
+
+          // Clear the form and file list after successful submission
+          document.getElementById("createForm").reset();
+          fileListContainer.innerHTML = "";
+          fileInputs.length = 0; // Clear the selected files array
         } catch (error) {
           console.error("Error creating document category:", error);
           alert("An error occurred while creating the document category");

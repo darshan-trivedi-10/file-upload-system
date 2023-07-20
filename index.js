@@ -4,7 +4,6 @@ const { Sequelize, DataTypes } = require("sequelize");
 const multer = require("multer");
 const path = require("path");
 
-// Replace 'database', 'username', and 'password' with your actual database credentials
 const sequelize = new Sequelize("FILE_STORE", "root", "", {
   host: "localhost",
   dialect: "mysql",
@@ -15,7 +14,6 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(cors());
 
-// Define the Sequelize model for the DocumentCategory table
 const DocumentCategory = sequelize.define("DocumentCategory", {
   categoryid: {
     type: DataTypes.INTEGER,
@@ -32,22 +30,27 @@ const DocumentCategory = sequelize.define("DocumentCategory", {
     values: ["STRING", "INTEGER", "FLOAT", "DATEONLY", "FILE"],
   },
   fileData: {
-    type: DataTypes.STRING, // Store the file name as a string in the database
+    type: DataTypes.STRING,
     allowNull: true,
+    get() {
+      return this.getDataValue("fileData")
+        ? JSON.parse(this.getDataValue("fileData"))
+        : null;
+    },
+    set(value) {
+      this.setDataValue("fileData", value ? JSON.stringify(value) : null);
+    },
   },
 });
 
-// Synchronize the model with the database
 sequelize
   .sync()
   .then(() => console.log("Model synchronized"))
   .catch((error) => console.error("Error synchronizing model:", error));
 
-// Configure Multer for file uploads
 const storage = multer.diskStorage({
   destination: "./uploads",
   filename: (req, file, cb) => {
-    // Generate a unique filename using Date.now() and the original file extension
     const uniqueFilename = `${Date.now()}-${path.extname(file.originalname)}`;
     cb(null, uniqueFilename);
   },
@@ -55,42 +58,37 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// API route to create a new document category with file data
-app.post("/create", upload.single("file"), async (req, res) => {
+app.post("/create", upload.array("files", 10), async (req, res) => {
   try {
     const { categoryname, categorydatatype } = req.body;
-    console.log(req.file, req.body.file);
-    const fileData = req.file ? req.file.filename : null;
+    console.log(req.files); // req.files will contain an array of uploaded files
 
-    // Create a new document category with the provided data
+    // Process multiple uploaded files if needed
+    const fileData = req.files.map((file) => file.filename);
+    console.log(fileData);
+
     const documentCategory = await DocumentCategory.create({
       categoryname,
       categorydatatype,
       fileData,
     });
 
-    res
-      .status(201)
-      .json({
-        message: "Document category created successfully",
-        documentCategory,
-      });
+    res.status(201).json({
+      message: "Document category created successfully",
+      documentCategory,
+    });
   } catch (error) {
     console.error("Error creating document category:", error);
-    res
-      .status(500)
-      .json({
-        error: "An error occurred while creating the document category",
-      });
+    res.status(500).json({
+      error: "An error occurred while creating the document category",
+    });
   }
 });
 
-// API route to update an existing document category with file data
-app.put("/update/:id", upload.single("file"), async (req, res) => {
+app.put("/update/:id", upload.array("files", 10), async (req, res) => {
   try {
     const documentCategoryId = req.params.id;
     const { categoryname, categorydatatype } = req.body;
-    const fileData = req.file ? req.file.filename : null;
 
     // Find the document category by ID
     const documentCategory = await DocumentCategory.findByPk(
@@ -104,7 +102,13 @@ app.put("/update/:id", upload.single("file"), async (req, res) => {
     // Update the document category with the provided data
     documentCategory.categoryname = categoryname;
     documentCategory.categorydatatype = categorydatatype;
-    documentCategory.fileData = fileData;
+
+    // Process multiple uploaded files if needed
+    if (req.files && req.files.length > 0) {
+      const fileData = req.files.map((file) => file.filename);
+      documentCategory.fileData = fileData;
+    }
+
     await documentCategory.save();
 
     res.json({
@@ -113,11 +117,9 @@ app.put("/update/:id", upload.single("file"), async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating document category:", error);
-    res
-      .status(500)
-      .json({
-        error: "An error occurred while updating the document category",
-      });
+    res.status(500).json({
+      error: "An error occurred while updating the document category",
+    });
   }
 });
 
